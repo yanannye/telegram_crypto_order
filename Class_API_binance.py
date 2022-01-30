@@ -13,7 +13,6 @@ class API_Binance():
         config.read('login_info.ini')
         binance_key = config['Binance']['key']
         binance_secret = config['Binance']['secret']
-
         client = Client(api_key=binance_key, api_secret=binance_secret)
         return client
 
@@ -24,6 +23,9 @@ class API_Binance():
         self.default_stable_coin = token
 
     def getAccountInfo(self):
+        '''
+        Return: (DataFrame)
+        '''
         lastPriceList = self.api.get_symbol_ticker()
 
         def getLastPriceOfSymbol(symbol, lastPriceList):
@@ -32,10 +34,13 @@ class API_Binance():
                 return -999
             else:
                 return float(df_lastPrice[df_lastPrice['symbol'] == symbol]['price'].iloc[0])
+
         ret = []
+        default_stable_coin = "USDT"
+
         for i in self.api.get_account()['balances']:
             if (float(i['free']) != 0) | (float(i['locked']) != 0):
-                symbol = i['asset'] + self.default_stable_coin
+                symbol = i['asset'] + default_stable_coin
 
                 free = float(i['free'])
                 locked = float(i['locked'])
@@ -58,4 +63,39 @@ class API_Binance():
                     'locked': locked,
                     'locked_in_stableCoin': locked_in_stableCoin,
                 })
-        return ret
+        return pd.DataFrame(ret)
+
+    def get_order_all(self):
+        '''
+        Return: (DataFrame)
+        '''
+        return pd.DataFrame(client.get_open_orders())
+
+    def get_order_symbol(self, symbol):
+        '''
+        Return: (DataFrame)
+        '''
+        df = pd.DataFrame(self.api.get_open_orders())
+        if len(df) != 0:
+            return df[df['symbol'] == symbol]
+        else:
+            return pd.DataFrame()
+
+    def cancel_order_symbol(self, symbol):
+        orders = self.get_order_symbol(symbol)
+        if len(orders['symbol']) != 0:
+            for index in orders.index:
+                symbol = orders['symbol'][index]
+                orderId = orders['orderId'][index]
+                self.api.cancel_order(symbol=symbol, orderId=orderId)
+
+    def cancel_order_all(self):
+        orders = self.get_order_all()
+        if (len(orders) != 0):
+            for index in orders.index:
+                symbol = orders['symbol'][index]
+                orderId = orders['orderId'][index]
+                self.api.cancel_order(symbol=symbol, orderId=orderId)
+
+
+
