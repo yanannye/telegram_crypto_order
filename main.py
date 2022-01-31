@@ -73,7 +73,7 @@ async def handler(event):
         # MICK_TODO :
         # calc the quality of transaction
         binance_handler = API_Binance()
-        binance_handler.execute_order(parserResult,15,'LIMIT')
+        binance_handler.execute_order(parserResult,15,'TEST')
 
 
         df = pd.DataFrame([parserResult])
