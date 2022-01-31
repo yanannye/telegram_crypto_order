@@ -8,6 +8,7 @@ from telethon import TelegramClient, events, utils
 import time
 from templateTextParser import templateTextParser
 import pandas as pd
+from Class_API_binance import API_Binance
 
 def get_env(name, message, cast=str):
     if name in os.environ:
@@ -56,8 +57,9 @@ async def handler(event):
 
     receivedText = '{\n"Symbol": "ADA/USDT 4H BINANCE",\n"Side": "BUY",\n"Price": 1.073,\n"StopLoss": "1.011",\n"Timestamp": "2022-01-29 16:00:00",\n"Translation": "ADA/USDT 建議買入1.073, 止損1.04",\n"Disclaimer": "嚴格執行停損，本分析不擔負任何損失賠償責任。"}'
     template = '{\n"Symbol": "{{Symbol}}",\n"Side": "{{Side}}",\n"Price": {{Price}},\n"StopLoss": "{{StopLoss}}",\n"Timestamp": "{{Timestamp}}","Translation": "xxxxxx",\n"Disclaimer": "嚴格執行停損，本分析不擔負任何損失賠償責任。"}'
-    parserResult = templateTextParser(event.text, template)
 
+
+    parserResult = templateTextParser(event.text, template)  #Return : { Symbol , Side ,Price,StopLoss,Timestamp}
     ifTargetString = True
     for i in parserResult.values():
         if i == "":
@@ -67,12 +69,18 @@ async def handler(event):
 
     if ifTargetString:
         parserResult['Symbol'] = parserResult['Symbol'].split(" ")[0].replace("/", "")
-        df = pd.DataFrame([parserResult])
 
+        # MICK_TODO :
+        # calc the quality of transaction
+        binance_handler = API_Binance()
+        binance_handler.execute_order(parserResult,15,'LIMIT')
+
+
+        df = pd.DataFrame([parserResult])
+        print(df)
         if os.path.isfile(pickleFileName):
             readDF = pd.read_pickle(pickleFileName)
             res = pd.concat([readDF, df], axis=0, ignore_index=True)
-            print(res)
             res.to_pickle(pickleFileName)
         else:
             df.to_pickle(pickleFileName)

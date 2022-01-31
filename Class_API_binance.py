@@ -1,6 +1,7 @@
 import configparser
 import pandas as pd
 from binance.client import Client
+from binance.enums import *
 
 
 class API_Binance():
@@ -69,7 +70,7 @@ class API_Binance():
         '''
         Return: (DataFrame)
         '''
-        return pd.DataFrame(client.get_open_orders())
+        return pd.DataFrame(self.api.get_open_orders())
 
     def get_order_symbol(self, symbol):
         '''
@@ -97,5 +98,33 @@ class API_Binance():
                 orderId = orders['orderId'][index]
                 self.api.cancel_order(symbol=symbol, orderId=orderId)
 
+    def execute_order(self, orderSignal, lot, mode):
+        '''
+        :param orderSignal:
+        :param lot:
+        :param mode: 'MARKET' / 'LIMIT' / "TEST"
+        :return:
+        '''
+        symbol = orderSignal['Symbol']
+        side = orderSignal['Side']
+        price = orderSignal["Price"]
+        order_func = self.api.create_order if mode == 'MARKET' or mode == 'LIMIT' else self.api.create_test_order
+        try:
+            args = dict(
+                side=side,
+                type=ORDER_TYPE_MARKET,
+                symbol=symbol,
+                quantity=abs(lot))
 
+            if mode == 'LIMIT':
+                args['price'] = price
+                args['type'] = ORDER_TYPE_LIMIT
+                args['timeInForce'] = 'GTC'
+
+            order_func(**args)
+            order_result = 'success'
+            print('|', mode, symbol, side, abs(lot), order_result)
+        except Exception as e:
+            print('| FAIL', symbol, symbol, side, abs(lot), str(e))
+            order_result = 'FAIL: ' + str(e)
 
